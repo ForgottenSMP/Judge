@@ -11,9 +11,9 @@ public class SchedulerUtil {
 
     public static boolean isFolia() {
         try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            Bukkit.class.getMethod("getRegionScheduler");
             return true;
-        } catch (ClassNotFoundException e) {
+        } catch (NoSuchMethodException e) {
             return false;
         }
     }
