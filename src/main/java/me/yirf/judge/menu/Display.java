@@ -6,8 +6,11 @@ import me.yirf.judge.Judge;
 import me.yirf.judge.config.Config;
 import me.yirf.judge.group.Group;
 import me.yirf.judge.interfaces.Colored;
+import me.yirf.judge.utils.SchedulerUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.ParsingException;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -23,6 +26,9 @@ import java.util.List;
 import static org.bukkit.entity.Display.Billboard;
 
 public class Display implements Colored {
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER = LegacyComponentSerializer.legacySection();
+
     public static void spawnMenu(Player player, Player target) {
         if (Config.getBoolean("allow-via") && Bukkit.getServer().getPluginManager().isPluginEnabled("ViaVersion")) {
             if(Via.getAPI().getPlayerVersion(player.getUniqueId()) < 762) {
@@ -30,10 +36,18 @@ public class Display implements Colored {
                 return;
             }
         }
+        SchedulerUtil.runEntity(target, () -> spawnMenuEntity(player, target));
+    }
+
+    private static void spawnMenuEntity(Player player, Player target) {
+        if (!player.isOnline() || !target.isOnline()) {
+            return;
+        }
+
         TextDisplay display = target.getWorld().spawn(target.getLocation(), TextDisplay.class);
         display.setShadowed(Config.getBoolean("properties.shadow"));
         display.setBillboard(Billboard.CENTER);
-        display.setVisibleByDefault(true);
+        display.setVisibleByDefault(false);
         display.setSeeThrough(Config.getBoolean(("properties.see-through")));
         if(!Config.getString("properties.color").equals("DEFAULT")) {
             List<Integer> colors = Config.getVectorAsList("properties.color");
@@ -59,9 +73,9 @@ public class Display implements Colored {
                 )
         );
 
-        Bukkit.getOnlinePlayers().forEach(p -> p.hideEntity(Judge.instance, display));
-        player.showEntity(Judge.instance, display);
         Group.add(display, player);
+
+        SchedulerUtil.runEntity(player, () -> player.showEntity(Judge.instance, display));
     }
 
     public static TextComponent getShow(Player player, Player target) {
@@ -72,17 +86,28 @@ public class Display implements Colored {
                 line = PlaceholderAPI.setPlaceholders(target, line);
             }
 
-            // Convert color codes before creating the component
-            line = Colored.format(line)
-                    .replaceAll("%player%", target.getName())
-                    .replaceAll("%viewer%", player.getName());
+            line = line
+                    .replace("%player%", target.getName())
+                    .replace("%viewer%", player.getName());
 
-            // Convert legacy color codes (§) to Adventure's Component
-            TextComponent textComponent = LegacyComponentSerializer.legacySection().deserialize(line);
-
-            text.append(textComponent).append(Component.newline());
+            text.append(parseLine(line)).append(Component.newline());
         }
 
         return text.build();
+    }
+
+    private static Component parseLine(String line) {
+        if (hasMiniMessageTag(line)) {
+            try {
+                return MINI_MESSAGE.deserialize(line);
+            } catch (ParsingException ignored) {
+            }
+        }
+        return LEGACY_SERIALIZER.deserialize(Colored.format(line));
+    }
+
+    private static boolean hasMiniMessageTag(String line) {
+        int open = line.indexOf('<');
+        return open != -1 && line.indexOf('>', open) != -1;
     }
 }

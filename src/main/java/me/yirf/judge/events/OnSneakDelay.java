@@ -4,8 +4,9 @@ import me.yirf.judge.Judge;
 import me.yirf.judge.config.Config;
 import me.yirf.judge.group.Group;
 import me.yirf.judge.menu.Display;
+import me.yirf.judge.utils.PlayerUtil;
 import me.yirf.judge.utils.RegionUtil;
-import org.bukkit.Bukkit;
+import me.yirf.judge.utils.SchedulerUtil;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -42,23 +43,32 @@ public class OnSneakDelay implements Listener {
 
         if (!event.isSneaking()) {return;}
 
-        Bukkit.getScheduler().runTaskLater(Judge.instance, () -> { //super fat fucking sched!!!
+        SchedulerUtil.runEntityLater(p, () -> {
             control.put(p.getUniqueId(), true);
             RayTraceResult result = p.rayTraceEntities(10);
             if (result == null || !(result.getHitEntity() instanceof Player)) {
+                control.remove(p.getUniqueId());
                 return;
             }
             Entity entity = result.getHitEntity();
             if (entity.hasMetadata("NPC")) {
+                control.remove(p.getUniqueId());
                 return;
             }
-            if(!Bukkit.getServer().getOnlinePlayers().contains((Player) entity)) {
+            Player target = (Player) entity;
+            if(PlayerUtil.isVanished(target)) {
+                control.remove(p.getUniqueId());
                 return;
             }
-            if (!event.isSneaking()) {
+            if(!target.isOnline()) {
+                control.remove(p.getUniqueId());
                 return;
             }
-            Display.spawnMenu(p, (Player) entity);
+            if (!p.isSneaking()) {
+                control.remove(p.getUniqueId());
+                return;
+            }
+            Display.spawnMenu(p, target);
         }, Config.getInt("delay"));
 
     }

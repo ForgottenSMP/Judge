@@ -8,6 +8,7 @@ import me.yirf.judge.events.OnSneak;
 import me.yirf.judge.events.OnSneakDelay;
 import me.yirf.judge.group.Group;
 import me.yirf.judge.utils.JsonUtil;
+import me.yirf.judge.utils.SchedulerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,8 +21,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 
 public final class Judge extends JavaPlugin {
@@ -107,17 +106,17 @@ public final class Judge extends JavaPlugin {
     }
 
     public void sched() {
-        Bukkit.getScheduler().runTaskTimer(this, this::checkFalse, 0L, 20L);
+        SchedulerUtil.runGlobalTimer(task -> checkFalse(), 1L, 20L);
     }
 
     public void checkFalse() {
-        Set<UUID> uuids = Group.group.keySet();
-        for (UUID u : uuids) {
-            Player player = Bukkit.getPlayer(u);
-            if (!player.isSneaking()) {
-                Group.remove(player);
-            }
-        }
+        Bukkit.getOnlinePlayers().stream()
+                .filter(Group::check)
+                .forEach(player -> SchedulerUtil.runEntity(player, () -> {
+                    if (!player.isSneaking()) {
+                        Group.remove(player);
+                    }
+                }));
     }
 
     public FileConfiguration getConfigYaml() {

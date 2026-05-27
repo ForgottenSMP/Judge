@@ -2,6 +2,7 @@ name: judge
 version: '0.8'
 main: me.yirf.judge.Judge
 api-version: '1.20'
+folia-supported: true
 authors: [ Yirf, Xtevv ]
 dependencies:
   server:

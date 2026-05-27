@@ -4,8 +4,8 @@ import me.yirf.judge.Judge;
 import me.yirf.judge.config.Config;
 import me.yirf.judge.group.Group;
 import me.yirf.judge.menu.Display;
+import me.yirf.judge.utils.PlayerUtil;
 import me.yirf.judge.utils.RegionUtil;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -41,10 +41,14 @@ public class OnSneak implements Listener {
         if (entity.hasMetadata("NPC")) {
             return;
         }
+        Player target = (Player) entity;
+        if (PlayerUtil.isVanished(target)) {
+            return;
+        }
 
         if (!event.isSneaking()) {return;}
-        if(Bukkit.getServer().getOnlinePlayers().contains(p)) {
-            Display.spawnMenu(p, (Player) entity);
+        if(p.isOnline()) {
+            Display.spawnMenu(p, target);
         }
 
     }
